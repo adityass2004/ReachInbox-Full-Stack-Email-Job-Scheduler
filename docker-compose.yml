@@ -67,7 +67,7 @@ services:
       ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
       JWT_SECRET: ${JWT_SECRET:-reachinbox-production-jwt-secret-min32chars}
       MAX_EMAILS_PER_HOUR_PER_SENDER: ${MAX_EMAILS_PER_HOUR_PER_SENDER:-200}
-      BULL_BOARD_ADMIN_EMAILS: ${BULL_BOARD_ADMIN_EMAILS:-admin@reachinbox.ai}
+      BULL_BOARD_ADMIN_EMAILS: ${BULL_BOARD_ADMIN_EMAILS:-*}
     depends_on:
       postgres:
         condition: service_healthy
