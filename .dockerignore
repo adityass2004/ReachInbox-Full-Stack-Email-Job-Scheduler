@@ -1,0 +1,20 @@
+node_modules
+.pnpm-store
+.next
+dist
+build
+coverage
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.git
+.github
+.vscode
+.idea
+
+# Prevent leaking sensitive environment files into container images
+.env
+.env.*
+!.env.example

@@ -42,7 +42,9 @@ COPY apps/web/tailwind.config.* ./apps/web/
 COPY apps/web/public ./apps/web/public/
 COPY apps/web/src ./apps/web/src
 
-ENV NEXT_PUBLIC_API_URL=https://reachinbox-api-457999655459.asia-south1.run.app
+# Browser-accessible API endpoint (configurable via build args; defaults to local development API)
+ARG NEXT_PUBLIC_API_URL=http://localhost:4000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN pnpm --filter @reachinbox/shared build
 RUN pnpm --filter @reachinbox/web build

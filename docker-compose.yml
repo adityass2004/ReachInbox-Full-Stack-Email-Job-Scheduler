@@ -11,6 +11,7 @@ services:
       - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d reachinbox"]
       interval: 5s
@@ -62,12 +63,26 @@ services:
       NODE_ENV: production
       PORT: 4000
       CORS_ORIGIN: http://localhost:3000
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgrespassword@postgres:5432/reachinbox}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
-      JWT_SECRET: ${JWT_SECRET:-reachinbox-production-jwt-secret-min32chars}
+      # Container-to-container internal communication using Docker DNS/service names
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/reachinbox
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET:-reachinbox-docker-jwt-secret-min32chars}
+      SESSION_SECRET: ${SESSION_SECRET:-reachinbox-docker-session-secret-min32chars}
       MAX_EMAILS_PER_HOUR_PER_SENDER: ${MAX_EMAILS_PER_HOUR_PER_SENDER:-200}
       BULL_BOARD_ADMIN_EMAILS: ${BULL_BOARD_ADMIN_EMAILS:-*}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: http://localhost:4000/api/auth/google/callback
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
+      SLACK_REDIRECT_URI: http://localhost:4000/api/integrations/slack/callback
+      SLACK_TOKEN_ENCRYPTION_KEY: ${SLACK_TOKEN_ENCRYPTION_KEY:-}
+      SLACK_NOTIFICATION_CHANNEL_ID: ${SLACK_NOTIFICATION_CHANNEL_ID:-}
+      ETHEREAL_HOST: ${ETHEREAL_HOST:-smtp.ethereal.email}
+      ETHEREAL_PORT: ${ETHEREAL_PORT:-587}
+      ETHEREAL_USER: ${ETHEREAL_USER:-}
+      ETHEREAL_PASSWORD: ${ETHEREAL_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,13 +97,23 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgrespassword@postgres:5432/reachinbox}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      PORT: 8080
+      # Container-to-container internal communication using Docker DNS/service names
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/reachinbox
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-5}
       MIN_EMAIL_DELAY_MS: ${MIN_EMAIL_DELAY_MS:-2000}
       MAX_EMAILS_PER_HOUR_PER_SENDER: ${MAX_EMAILS_PER_HOUR_PER_SENDER:-200}
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
+      SLACK_REDIRECT_URI: http://localhost:4000/api/integrations/slack/callback
+      SLACK_TOKEN_ENCRYPTION_KEY: ${SLACK_TOKEN_ENCRYPTION_KEY:-}
       SLACK_NOTIFICATION_CHANNEL_ID: ${SLACK_NOTIFICATION_CHANNEL_ID:-}
+      ETHEREAL_HOST: ${ETHEREAL_HOST:-smtp.ethereal.email}
+      ETHEREAL_PORT: ${ETHEREAL_PORT:-587}
+      ETHEREAL_USER: ${ETHEREAL_USER:-}
+      ETHEREAL_PASSWORD: ${ETHEREAL_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,12 +124,16 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Browser-facing externally reachable API URL (never internal http://api:4000)
+        NEXT_PUBLIC_API_URL: http://localhost:4000
     container_name: reachinbox-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      PORT: 3000
       NEXT_PUBLIC_API_URL: http://localhost:4000
     depends_on:
       - api

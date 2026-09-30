@@ -52,7 +52,7 @@ describe("Email Rate-Limiting & Rescheduling Lifecycle (150 Emails Scenario)", (
       const job = dbJobs.get(jobId)!;
 
       // 1. Atomic state transition: [SCHEDULED, RESCHEDULED, RATE_LIMITED] -> PROCESSING
-      assert.ok([EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED, EmailStatus.RATE_LIMITED].includes(job.status));
+      assert.ok(([EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED, EmailStatus.RATE_LIMITED] as EmailStatus[]).includes(job.status));
       job.status = EmailStatus.PROCESSING;
 
       // 2. Check hourly rate limit
@@ -125,7 +125,7 @@ describe("Email Rate-Limiting & Rescheduling Lifecycle (150 Emails Scenario)", (
 
     // 5. Verify Pending/Scheduled Dashboard query semantics:
     // Scheduled/Pending includes scheduled, processing, rate_limited, and rescheduled.
-    const inFlightStatuses = [
+    const inFlightStatuses: EmailStatus[] = [
       EmailStatus.SCHEDULED,
       EmailStatus.PROCESSING,
       EmailStatus.RATE_LIMITED,
