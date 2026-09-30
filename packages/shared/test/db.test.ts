@@ -18,9 +18,10 @@ describe("Database Utility Module", () => {
   it("exports matching enums for EmailStatus and CampaignStatus", () => {
     assert.strictEqual(EmailStatus.SCHEDULED, "SCHEDULED");
     assert.strictEqual(EmailStatus.PROCESSING, "PROCESSING");
+    assert.strictEqual(EmailStatus.RATE_LIMITED, "RATE_LIMITED");
+    assert.strictEqual(EmailStatus.RESCHEDULED, "RESCHEDULED");
     assert.strictEqual(EmailStatus.SENT, "SENT");
     assert.strictEqual(EmailStatus.FAILED, "FAILED");
-    assert.strictEqual(EmailStatus.RESCHEDULED, "RESCHEDULED");
 
     assert.strictEqual(CampaignStatus.SCHEDULED, "SCHEDULED");
     assert.strictEqual(CampaignStatus.IN_PROGRESS, "IN_PROGRESS");

@@ -19,21 +19,26 @@ import { logger } from "../logger.js";
 
 async function deferEmailJob(
   emailJobId: string,
-  scheduledAt: Date,
+  retryAt: Date,
   reason: string,
   jobIdPrefix: string,
 ): Promise<void> {
   await prisma.emailJob.update({
     where: { id: emailJobId },
-    data: { status: EmailStatus.RESCHEDULED, scheduledAt, failureReason: reason },
+    data: {
+      status: EmailStatus.RESCHEDULED,
+      nextAttemptAt: retryAt,
+      rescheduledAt: new Date(),
+      failureReason: reason,
+    },
   });
 
   const retryJob = await scheduleEmailJob({
     emailJobId,
-    scheduledAt,
-    overrideDelayMs: Math.max(0, scheduledAt.getTime() - Date.now()),
+    scheduledAt: retryAt,
+    overrideDelayMs: Math.max(0, retryAt.getTime() - Date.now()),
     customJobOptions: {
-      jobId: `${emailJobId}-${jobIdPrefix}-${scheduledAt.getTime()}`,
+      jobId: `${emailJobId}-${jobIdPrefix}-${retryAt.getTime()}`,
     },
   });
 
@@ -49,6 +54,8 @@ function toSearchDocument(
   status: EmailStatus,
   scheduledAt: Date,
   sentAt: Date | null = null,
+  nextAttemptAt: Date | null = null,
+  rescheduledAt: Date | null = null,
 ): EmailSearchDocument {
   return {
     emailJobId: emailJob.id,
@@ -60,6 +67,9 @@ function toSearchDocument(
     campaignId: emailJob.campaignId,
     scheduledAt: scheduledAt.toISOString(),
     sentAt: sentAt?.toISOString() ?? null,
+    nextAttemptAt: nextAttemptAt?.toISOString() ?? (emailJob.nextAttemptAt ? emailJob.nextAttemptAt.toISOString() : null),
+    rescheduledAt: rescheduledAt?.toISOString() ?? (emailJob.rescheduledAt ? emailJob.rescheduledAt.toISOString() : null),
+    createdAt: emailJob.createdAt ? emailJob.createdAt.toISOString() : undefined,
   };
 }
 
@@ -88,12 +98,12 @@ export async function processEmailJob(
     },
   );
 
-  // 1. ATOMIC STATE TRANSITION: SCHEDULED/RESCHEDULED -> PROCESSING
+  // 1. ATOMIC STATE TRANSITION: SCHEDULED/RESCHEDULED/RATE_LIMITED -> PROCESSING
   const transition = await prisma.emailJob.updateMany({
     where: {
       id: emailJobId,
       status: {
-        in: [EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED],
+        in: [EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED, EmailStatus.RATE_LIMITED],
       },
     },
     data: {
@@ -215,6 +225,7 @@ export async function processEmailJob(
 
   if (!rateLimitResult.storageAvailable) {
     const retryAt = new Date(Date.now() + 30_000);
+    const now = new Date();
     await deferEmailJob(
       emailJobId,
       retryAt,
@@ -222,7 +233,15 @@ export async function processEmailJob(
       "redis-retry",
     );
     await emailSearchService.indexEmailJobs([
-      toSearchDocument(emailJob, emailJob.sender.email, EmailStatus.RESCHEDULED, retryAt),
+      toSearchDocument(
+        emailJob,
+        emailJob.sender.email,
+        EmailStatus.RESCHEDULED,
+        emailJob.scheduledAt,
+        null,
+        retryAt,
+        now,
+      ),
     ]);
     logger.warn("RATE_LIMIT_DEFERRED", "Redis unavailable; deferring email job", {
       emailJobId,
@@ -235,6 +254,7 @@ export async function processEmailJob(
     // The hourly delay prevents a hot reschedule loop while preserving the job.
     const nextWindowTime = rateLimitResult.nextWindowStart;
     const delayMs = rateLimitResult.delayUntilNextWindowMs;
+    const now = new Date();
 
     logger.warn(
       "RATE_LIMIT_EXCEEDED",
@@ -251,18 +271,19 @@ export async function processEmailJob(
       },
     );
 
-    // Atomically update PostgreSQL state: status -> RESCHEDULED, new scheduledAt
+    // 1. Record RATE_LIMITED status and timestamps without overwriting original scheduledAt
     await prisma.emailJob.update({
       where: { id: emailJobId },
       data: {
-        status: EmailStatus.RESCHEDULED,
-        scheduledAt: nextWindowTime,
+        status: EmailStatus.RATE_LIMITED,
+        rescheduledAt: now,
+        nextAttemptAt: nextWindowTime,
         rescheduleCount: { increment: 1 },
         failureReason: `Hourly rate limit reached (${rateLimitResult.currentUsage}/${effectiveHourlyLimit}). Rescheduled to ${nextWindowTime.toISOString()}`,
       },
     });
 
-    // Add delayed job to BullMQ for the next window
+    // 2. Add delayed job to BullMQ for the next window
     const newBullJob = await scheduleEmailJob({
       emailJobId,
       scheduledAt: nextWindowTime,
@@ -272,13 +293,25 @@ export async function processEmailJob(
       },
     });
 
+    // 3. Atomically transition to RESCHEDULED state with new bullJobId
     await prisma.emailJob.update({
       where: { id: emailJobId },
-      data: { bullJobId: String(newBullJob.id) },
+      data: {
+        status: EmailStatus.RESCHEDULED,
+        bullJobId: String(newBullJob.id),
+      },
     });
 
     await emailSearchService.indexEmailJobs([
-      toSearchDocument(emailJob, emailJob.sender.email, EmailStatus.RESCHEDULED, nextWindowTime),
+      toSearchDocument(
+        emailJob,
+        emailJob.sender.email,
+        EmailStatus.RESCHEDULED,
+        emailJob.scheduledAt,
+        null,
+        nextWindowTime,
+        now,
+      ),
     ]);
 
     await notifySlackRateLimit({
@@ -311,6 +344,7 @@ export async function processEmailJob(
     if (!delayCoordination.available) {
       await decrementHourlyRateLimit(emailJob.senderId, rateLimitResult.hourWindow);
       const retryAt = new Date(Date.now() + 30_000);
+      const now = new Date();
       await deferEmailJob(
         emailJobId,
         retryAt,
@@ -318,7 +352,15 @@ export async function processEmailJob(
         "delay-retry",
       );
       await emailSearchService.indexEmailJobs([
-        toSearchDocument(emailJob, emailJob.sender.email, EmailStatus.RESCHEDULED, retryAt),
+        toSearchDocument(
+          emailJob,
+          emailJob.sender.email,
+          EmailStatus.RESCHEDULED,
+          emailJob.scheduledAt,
+          null,
+          retryAt,
+          now,
+        ),
       ]);
       logger.warn("DELAY_DEFERRED", "Redis unavailable; deferring email job", {
         emailJobId,
@@ -344,19 +386,22 @@ export async function processEmailJob(
           },
         );
 
+        const delayNow = new Date();
+        const nextTargetTime = new Date(delayCoordination.scheduledSendTime);
         await decrementHourlyRateLimit(emailJob.senderId, rateLimitResult.hourWindow);
         await prisma.emailJob.update({
           where: { id: emailJobId },
           data: {
             status: EmailStatus.RESCHEDULED,
-            scheduledAt: new Date(delayCoordination.scheduledSendTime),
+            rescheduledAt: delayNow,
+            nextAttemptAt: nextTargetTime,
             failureReason: `Paced by distributed minimum delay coordinator (${delayCoordination.waitMs}ms)`,
           },
         });
 
         const newBullJob = await scheduleEmailJob({
           emailJobId,
-          scheduledAt: new Date(delayCoordination.scheduledSendTime),
+          scheduledAt: nextTargetTime,
           overrideDelayMs: delayCoordination.waitMs,
           customJobOptions: {
             jobId: `${emailJobId}-delay-${delayCoordination.scheduledSendTime}`,
@@ -365,7 +410,7 @@ export async function processEmailJob(
 
         await prisma.emailJob.update({
           where: { id: emailJobId },
-          data: { bullJobId: newBullJob.id },
+          data: { bullJobId: String(newBullJob.id) },
         });
 
         await emailSearchService.indexEmailJobs([
@@ -373,7 +418,10 @@ export async function processEmailJob(
             emailJob,
             emailJob.sender.email,
             EmailStatus.RESCHEDULED,
-            new Date(delayCoordination.scheduledSendTime),
+            emailJob.scheduledAt,
+            null,
+            nextTargetTime,
+            delayNow,
           ),
         ]);
 

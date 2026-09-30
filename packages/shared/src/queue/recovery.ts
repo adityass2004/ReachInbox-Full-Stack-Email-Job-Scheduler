@@ -37,11 +37,12 @@ export async function runRecoveryCheck(options?: {
     const getPendingJobs = (cursor?: string) =>
       prisma.emailJob.findMany({
         where: {
-          status: { in: [EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED] },
+          status: { in: [EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED, EmailStatus.RATE_LIMITED] },
         },
         select: {
           id: true,
           scheduledAt: true,
+          nextAttemptAt: true,
           idempotencyKey: true,
           bullJobId: true,
         },
@@ -69,10 +70,11 @@ export async function runRecoveryCheck(options?: {
             continue;
           }
 
-          const delay = calculateDelayMs(job.scheduledAt);
+          const targetTime = job.nextAttemptAt ?? job.scheduledAt;
+          const delay = calculateDelayMs(targetTime);
           const bullJob = await scheduleEmailJob({
             emailJobId: job.id,
-            scheduledAt: job.scheduledAt,
+            scheduledAt: targetTime,
             idempotencyKey: job.idempotencyKey,
             overrideDelayMs: delay,
           });

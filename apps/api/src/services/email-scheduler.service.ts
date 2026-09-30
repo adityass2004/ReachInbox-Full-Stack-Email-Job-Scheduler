@@ -119,7 +119,11 @@ export class EmailSchedulerService {
       // Ensure BullMQ jobs exist in Redis (in case Redis was flushed)
       const queue = getEmailQueue();
       for (const job of existingJobs) {
-        if (job.status === EmailStatus.SCHEDULED || job.status === EmailStatus.RESCHEDULED) {
+        if (
+          job.status === EmailStatus.SCHEDULED ||
+          job.status === EmailStatus.RESCHEDULED ||
+          job.status === EmailStatus.RATE_LIMITED
+        ) {
           try {
             const existingBullJob = await queue.getJob(job.bullJobId ?? job.id);
             const bullJob = existingBullJob ?? await scheduleEmailJob({
@@ -293,7 +297,12 @@ export class EmailSchedulerService {
     const where: Prisma.EmailJobWhereInput = {
       userId,
       status: {
-        in: [EmailStatus.SCHEDULED, EmailStatus.RESCHEDULED],
+        in: [
+          EmailStatus.SCHEDULED,
+          EmailStatus.PROCESSING,
+          EmailStatus.RATE_LIMITED,
+          EmailStatus.RESCHEDULED,
+        ],
       },
     };
 
@@ -429,6 +438,9 @@ export class EmailSchedulerService {
         campaignId: job.campaignId,
         scheduledAt: job.scheduledAt.toISOString(),
         sentAt: job.sentAt ? job.sentAt.toISOString() : null,
+        nextAttemptAt: job.nextAttemptAt ? job.nextAttemptAt.toISOString() : null,
+        rescheduledAt: job.rescheduledAt ? job.rescheduledAt.toISOString() : null,
+        createdAt: job.createdAt ? job.createdAt.toISOString() : undefined,
       })),
       total,
       page: params.page,

@@ -17,8 +17,12 @@ export interface EmailDetailData {
   subject: string;
   body: string;
   status: string;
-  sentAt: string | null;
+  createdAt?: string;
   scheduledAt?: string;
+  rescheduledAt?: string | null;
+  nextAttemptAt?: string | null;
+  sentAt: string | null;
+  failureReason?: string | null;
   messageId: string | null;
   etherealPreviewUrl: string | null;
   sender: {
@@ -35,21 +39,87 @@ interface EmailDetailDrawerProps {
 }
 
 function formatDetailDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return 'Pending delivery';
+  if (!dateStr) return '—';
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return 'Pending delivery';
+  if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    second: '2-digit',
   });
+}
+
+interface StatusDetailConfig {
+  label: string;
+  tooltip: string;
+  bgClass: string;
+  textClass: string;
+}
+
+function getStatusDetailConfig(status: string): StatusDetailConfig {
+  const norm = status.toUpperCase();
+  switch (norm) {
+    case 'SCHEDULED':
+      return {
+        label: 'Scheduled',
+        tooltip: 'Waiting for scheduled time',
+        bgClass: 'bg-highlight-orangeBadge',
+        textClass: 'text-highlight-orangeText',
+      };
+    case 'PROCESSING':
+      return {
+        label: 'Processing',
+        tooltip: 'Currently being processed',
+        bgClass: 'bg-blue-50',
+        textClass: 'text-blue-700',
+      };
+    case 'RATE_LIMITED':
+      return {
+        label: 'Rate Limited',
+        tooltip: 'Sender hourly limit reached',
+        bgClass: 'bg-amber-50',
+        textClass: 'text-amber-800',
+      };
+    case 'RESCHEDULED':
+      return {
+        label: 'Rescheduled',
+        tooltip: 'Waiting for the next available execution time',
+        bgClass: 'bg-purple-50',
+        textClass: 'text-purple-700',
+      };
+    case 'SENT':
+      return {
+        label: 'Sent',
+        tooltip: 'Successfully delivered',
+        bgClass: 'bg-primary-soft',
+        textClass: 'text-primary',
+      };
+    case 'FAILED':
+      return {
+        label: 'Failed',
+        tooltip: 'Delivery failed',
+        bgClass: 'bg-red-50',
+        textClass: 'text-red-700',
+      };
+    default:
+      return {
+        label: status,
+        tooltip: status,
+        bgClass: 'bg-surface-input',
+        textClass: 'text-ink-secondary',
+      };
+  }
 }
 
 export function EmailDetailDrawer({ email, loading, error, onClose }: EmailDetailDrawerProps) {
   const [starred, setStarred] = useState(false);
 
   if (!email && !loading && !error) return null;
+
+  const statusCfg = email ? getStatusDetailConfig(email.status) : null;
 
   return (
     <div
@@ -81,7 +151,7 @@ export function EmailDetailDrawer({ email, loading, error, onClose }: EmailDetai
           </div>
         )}
 
-        {email && !loading && (
+        {email && !loading && statusCfg && (
           <>
             {/* Header: Back navigation, Title, Tracking ID, and Right Actions */}
             <header className="flex items-center justify-between border-b border-surface-border px-5 py-3.5 bg-white">
@@ -167,13 +237,70 @@ export function EmailDetailDrawer({ email, loading, error, onClose }: EmailDetai
 
             {/* Content Scroll Area */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              {/* Highlighted Yellow Notification Box */}
+              {/* Lifecycle Timestamps & Status Details Card */}
+              <div className="rounded-lg border border-surface-border bg-surface-input/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-ink-primary">Delivery Lifecycle</span>
+                  <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold ${statusCfg.bgClass} ${statusCfg.textClass}`}>
+                    {statusCfg.label}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-surface-border/70 text-xs">
+                  {email.createdAt && (
+                    <div>
+                      <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Created</span>
+                      <span className="font-medium text-ink-primary">{formatDetailDate(email.createdAt)}</span>
+                    </div>
+                  )}
+                  {email.scheduledAt && (
+                    <div>
+                      <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Scheduled For</span>
+                      <span className="font-medium text-ink-primary">{formatDetailDate(email.scheduledAt)}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Status</span>
+                    <span className="font-medium text-ink-primary">{statusCfg.tooltip}</span>
+                  </div>
+                  {email.rescheduledAt && (
+                    <div>
+                      <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Rescheduled At</span>
+                      <span className="font-medium text-purple-700">{formatDetailDate(email.rescheduledAt)}</span>
+                    </div>
+                  )}
+                  {email.nextAttemptAt && (
+                    <div>
+                      <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Next Attempt</span>
+                      <span className="font-medium text-purple-700">{formatDetailDate(email.nextAttemptAt)}</span>
+                    </div>
+                  )}
+                  {email.sentAt && (
+                    <div>
+                      <span className="block text-[10px] text-ink-muted uppercase tracking-wider font-semibold">Sent At</span>
+                      <span className="font-medium text-primary">{formatDetailDate(email.sentAt)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {email.failureReason && (
+                  <div className="pt-2 border-t border-surface-border/70 text-[11px] text-ink-secondary">
+                    <span className="font-semibold text-ink-primary">Event Detail:</span> {email.failureReason}
+                  </div>
+                )}
+              </div>
+
+              {/* Highlighted Notice Box */}
               <div className="rounded-md border-l-3 border-[#F3E488] bg-highlight-yellow p-3 text-xs leading-relaxed text-ink-primary">
                 <span className="font-semibold text-amber-900 block mb-0.5">
                   ReachInbox Delivery Notice
                 </span>
-                Scheduled status: <span className="font-medium uppercase">{email.status}</span>.
-                All job dispatches are paced and rate-limited safely with persistent recovery.
+                Status: <span className="font-semibold uppercase">{email.status}</span> ({statusCfg.tooltip}).
+                {email.nextAttemptAt && (
+                  <span className="block mt-1 font-medium text-amber-950">
+                    Rescheduled for: {formatDetailDate(email.nextAttemptAt)}
+                  </span>
+                )}
               </div>
 
               {/* Email Body */}

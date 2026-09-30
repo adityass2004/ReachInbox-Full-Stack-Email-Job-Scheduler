@@ -10,6 +10,9 @@ export interface EmailSearchDocument {
     campaignId: string | null;
     scheduledAt: string;
     sentAt: string | null;
+    rescheduledAt?: string | null;
+    nextAttemptAt?: string | null;
+    createdAt?: string;
 }
 
 export interface EmailSearchQuery {

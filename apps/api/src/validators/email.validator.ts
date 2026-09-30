@@ -42,7 +42,7 @@ export const searchEmailsQuerySchema = z.object({
   status: z.nativeEnum(EmailStatus).optional(),
   statuses: z.preprocess(
     (value) => typeof value === 'string' ? value.split(',').map((status) => status.trim()).filter(Boolean) : value,
-    z.array(z.nativeEnum(EmailStatus)).max(5).optional(),
+    z.array(z.nativeEnum(EmailStatus)).max(6).optional(),
   ),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   limit: z.coerce.number().int().min(1).max(1000).default(20),

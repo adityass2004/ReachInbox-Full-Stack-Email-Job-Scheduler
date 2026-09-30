@@ -15,9 +15,10 @@ generator client {
 enum EmailStatus {
   SCHEDULED
   PROCESSING
+  RATE_LIMITED
+  RESCHEDULED
   SENT
   FAILED
-  RESCHEDULED
 }
 
 enum CampaignStatus {
@@ -107,6 +108,8 @@ model EmailJob {
   body            String      @db.Text
   scheduledAt     DateTime
   sentAt          DateTime?
+  rescheduledAt   DateTime?
+  nextAttemptAt   DateTime?
   status          EmailStatus @default(SCHEDULED)
   bullJobId          String?
   messageId          String?

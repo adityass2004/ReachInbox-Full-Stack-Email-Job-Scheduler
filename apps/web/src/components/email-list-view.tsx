@@ -16,8 +16,30 @@ import { EmailDetailDrawer, EmailDetailData } from './email/email-detail-drawer'
 
 type ListMode = 'scheduled' | 'sent';
 interface ListResult<T> { items: T[]; total: number; page: number; limit: number; totalPages: number }
-interface ScheduledApiEmail { id: string; recipient: string; subject: string; status: string; scheduledAt: string; sentAt: string | null; sender: { email: string } }
-interface SearchApiEmail { emailJobId: string; recipient: string; sender: string; subject: string; status: string; scheduledAt: string; sentAt: string | null }
+interface ScheduledApiEmail {
+  id: string;
+  recipient: string;
+  subject: string;
+  status: string;
+  createdAt?: string;
+  scheduledAt: string;
+  rescheduledAt?: string | null;
+  nextAttemptAt?: string | null;
+  sentAt: string | null;
+  sender: { email: string };
+}
+interface SearchApiEmail {
+  emailJobId: string;
+  recipient: string;
+  sender: string;
+  subject: string;
+  status: string;
+  createdAt?: string;
+  scheduledAt: string;
+  rescheduledAt?: string | null;
+  nextAttemptAt?: string | null;
+  sentAt: string | null;
+}
 
 const PAGE_SIZE = 20;
 
@@ -28,7 +50,7 @@ export function EmailListView({ mode }: { mode: ListMode }) {
   const [total, setTotal] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'ALL' | 'SENT' | 'FAILED'>('ALL');
+  const [status, setStatus] = useState<string>('ALL');
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,7 +77,10 @@ export function EmailListView({ mode }: { mode: ListMode }) {
           sender: item.sender.email,
           subject: item.subject,
           status: item.status,
+          createdAt: item.createdAt,
           scheduledAt: item.scheduledAt,
+          rescheduledAt: item.rescheduledAt ?? null,
+          nextAttemptAt: item.nextAttemptAt ?? null,
           sentAt: item.sentAt,
         })));
         setTotal(result.total);
@@ -68,7 +93,10 @@ export function EmailListView({ mode }: { mode: ListMode }) {
           sender: item.sender,
           subject: item.subject,
           status: item.status,
+          createdAt: item.createdAt,
           scheduledAt: item.scheduledAt,
+          rescheduledAt: item.rescheduledAt ?? null,
+          nextAttemptAt: item.nextAttemptAt ?? null,
           sentAt: item.sentAt,
         })));
         setTotal(result.total);
@@ -167,14 +195,42 @@ export function EmailListView({ mode }: { mode: ListMode }) {
                     onClick={() => { setStatus('SENT'); setPage(1); setFilterMenuOpen(false); }}
                     className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'SENT' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
                   >
-                    Sent only
+                    Sent
                   </button>
                   <button
                     type="button"
                     onClick={() => { setStatus('FAILED'); setPage(1); setFilterMenuOpen(false); }}
                     className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'FAILED' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
                   >
-                    Failed only
+                    Failed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('RATE_LIMITED'); setPage(1); setFilterMenuOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'RATE_LIMITED' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
+                  >
+                    Rate Limited
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('RESCHEDULED'); setPage(1); setFilterMenuOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'RESCHEDULED' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
+                  >
+                    Rescheduled
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('PROCESSING'); setPage(1); setFilterMenuOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'PROCESSING' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
+                  >
+                    Processing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('SCHEDULED'); setPage(1); setFilterMenuOpen(false); }}
+                    className={`block w-full px-3 py-1.5 text-left text-xs ${status === 'SCHEDULED' ? 'font-semibold text-primary bg-primary-soft' : 'text-ink-secondary hover:bg-surface-input'}`}
+                  >
+                    Scheduled
                   </button>
                 </div>
               )}
