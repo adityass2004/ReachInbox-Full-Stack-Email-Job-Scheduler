@@ -1,0 +1,38 @@
+{
+  "name": "reachinbox-job-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Production-grade distributed email job scheduler with BullMQ, Redis, Elasticsearch, and Next.js",
+  "scripts": {
+    "dev:api": "pnpm --filter @reachinbox/api dev",
+    "dev:worker": "pnpm --filter @reachinbox/worker dev",
+    "dev:web": "pnpm --filter @reachinbox/web dev",
+    "build": "pnpm -r --sort run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "recover:jobs": "node --import tsx scripts/recover-orphaned-jobs.ts",
+    "verify:setup": "node scripts/verify-setup.js",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
+    "db:seed": "node --import tsx prisma/seed.ts",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "prettier": "^3.3.3",
+    "prisma": "^5.16.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "pnpm@9.7.1",
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "@reachinbox/shared": "workspace:^"
+  }
+}

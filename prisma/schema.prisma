@@ -1,0 +1,171 @@
+// Prisma Schema for ReachInbox Full-stack Email Job Scheduler
+// PostgreSQL source of truth for all users, senders, campaigns, email jobs, and integrations.
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+enum EmailStatus {
+  SCHEDULED
+  PROCESSING
+  SENT
+  FAILED
+  RESCHEDULED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  googleId        String?          @unique
+  email           String           @unique
+  name            String
+  avatar          String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  senders         Sender[]
+  campaigns       Campaign[]
+  emailJobs       EmailJob[]
+  slackConnection SlackConnection?
+  slackOAuthStates SlackOAuthState[]
+
+  @@map("users")
+}
+
+model Sender {
+  id               String      @id @default(uuid())
+  userId           String
+  owner            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email            String
+  displayName      String
+  etherealHost     String?     @default("smtp.ethereal.email")
+  etherealPort     Int?        @default(587)
+  etherealUser     String?
+  etherealPassword String?
+  active           Boolean     @default(true)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  emailJobs        EmailJob[]
+
+  @@index([userId])
+  @@index([email])
+  @@map("senders")
+}
+
+model Campaign {
+  id           String         @id @default(uuid())
+  userId       String
+  owner        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject      String
+  body         String         @db.Text
+  startTime    DateTime
+  delayMs      Int            @default(2000)
+  hourlyLimit  Int            @default(200)
+  status       CampaignStatus @default(SCHEDULED)
+  totalEmails  Int            @default(0)
+  sentEmails   Int            @default(0)
+  failedEmails Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  emailJobs    EmailJob[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([startTime])
+  @@map("campaigns")
+}
+
+model EmailJob {
+  id              String      @id @default(uuid())
+  campaignId      String?
+  campaign        Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  senderId        String
+  sender          Sender      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Rules: recipient must NOT be globally unique (can be in multiple campaigns)
+  recipient       String
+  subject         String
+  body            String      @db.Text
+  scheduledAt     DateTime
+  sentAt          DateTime?
+  status          EmailStatus @default(SCHEDULED)
+  bullJobId          String?
+  messageId          String?
+  etherealPreviewUrl String?
+  
+  // Rule: idempotencyKey must be unique to guarantee application-level idempotency
+  idempotencyKey     String      @unique
+  failureReason      String?     @db.Text
+  retryCount         Int         @default(0)
+  rescheduleCount    Int         @default(0)
+  
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Indexes for scheduled/sent dashboard queries, restart recovery, and rate limit isolation
+  @@index([userId, status])
+  @@index([status, scheduledAt])
+  @@index([senderId, scheduledAt])
+  @@index([campaignId])
+  @@index([bullJobId])
+  @@index([recipient])
+  @@map("email_jobs")
+}
+
+model SlackConnection {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encryptedToken     String   @db.Text
+  teamId             String?
+  teamName           String?
+  channelId          String?
+  channelName        String?
+  incomingWebhookUrl String?  @db.Text
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+  @@map("slack_connections")
+}
+
+model SlackOAuthState {
+  stateHash String   @id
+  userId    String
+  owner     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("slack_oauth_states")
+}
+
+model GoogleOAuthState {
+  stateHash String   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@map("google_oauth_states")
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@reachinbox/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared TypeScript types, constants, and utilities for ReachInbox Email Scheduler",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "@elastic/elasticsearch": "^8.17.0",
+    "@prisma/client": "^5.16.1",
+    "bullmq": "^5.8.7",
+    "ioredis": "^5.4.1"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rimraf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx test/**/*.test.ts",
+    "lint": "eslint \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.10",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  }
+}

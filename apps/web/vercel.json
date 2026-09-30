@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm --filter @reachinbox/shared build && pnpm --filter @reachinbox/web build",
+  "installCommand": "cd ../.. && pnpm install --filter @reachinbox/web...",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "@reachinbox_api_url"
+  }
+}
