@@ -1,4 +1,4 @@
-import { prisma } from '../packages/shared/src/db/index.js';
+import { prisma } from '@reachinbox/shared';
 
 async function main() {
   const tables = [

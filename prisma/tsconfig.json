@@ -5,6 +5,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "./**/*.js"],
-  "references": [{ "path": "../packages/shared" }]
+  "include": ["./**/*.ts"]
 }

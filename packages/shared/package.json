@@ -2,6 +2,7 @@
   "name": "@reachinbox/shared",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Shared TypeScript types, constants, and utilities for ReachInbox Email Scheduler",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
