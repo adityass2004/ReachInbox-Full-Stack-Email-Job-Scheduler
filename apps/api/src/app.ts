@@ -33,7 +33,11 @@ export function createApp(): Express {
       origin: (requestOrigin, callback) => {
         if (!requestOrigin) return callback(null, true);
         if (config.corsOrigin && requestOrigin === config.corsOrigin) return callback(null, true);
-        if (/^https?:\/\/localhost(:\d+)?$/.test(requestOrigin) || requestOrigin.endsWith('.run.app')) {
+        if (
+          /^https?:\/\/localhost(:\d+)?$/.test(requestOrigin) ||
+          requestOrigin.endsWith('.run.app') ||
+          requestOrigin.endsWith('.vercel.app')
+        ) {
           return callback(null, true);
         }
         return callback(null, true);
@@ -59,8 +63,9 @@ export function createApp(): Express {
     const isConfiguredOrigin = origin === config.corsOrigin;
     const isLocalhost = /^https?:\/\/localhost(:\d+)?$/.test(origin);
     const isCloudRun = origin.endsWith('.run.app');
+    const isVercel = origin.endsWith('.vercel.app');
 
-    if (isSameHost || isConfiguredOrigin || isLocalhost || isCloudRun) {
+    if (isSameHost || isConfiguredOrigin || isLocalhost || isCloudRun || isVercel) {
       next();
       return;
     }
