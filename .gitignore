@@ -22,16 +22,23 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 *.env.local
+.env.development
+.env.production
 apps/*/.env
 apps/*/.env.local
+apps/*/.env.development
+apps/*/.env.production
 apps/*/.env.*.local
 packages/*/.env
 packages/*/.env.local
+packages/*/.env.development
+packages/*/.env.production
 packages/*/.env.*.local
 env.yaml
 *-env.yaml
 !.env.example
 !apps/*/.env.example
+!packages/*/.env.example
 
 # IDE & OS
 .vscode/
