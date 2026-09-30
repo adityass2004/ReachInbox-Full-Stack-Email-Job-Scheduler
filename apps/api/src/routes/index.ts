@@ -4,6 +4,7 @@ import { emailRouter } from './email.router.js';
 import { slackRouter } from './slack.router.js';
 import { authRouter } from './auth.router.js';
 import { senderRouter } from './sender.router.js';
+import { queueRouter } from './queue.router.js';
 
 export const apiRouter: Router = Router();
 
@@ -17,6 +18,9 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/emails', emailRouter);
 
 apiRouter.use('/senders', senderRouter);
+
+// BullMQ Queue observability routes
+apiRouter.use('/queue', queueRouter);
 
 // Slack workspace connection routes
 apiRouter.use('/integrations/slack', slackRouter);
