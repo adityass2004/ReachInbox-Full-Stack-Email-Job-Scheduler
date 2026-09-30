@@ -7,8 +7,10 @@ import { DEFAULT_CONFIG } from "@reachinbox/shared";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load root .env or app .env if present
+// Load root .env.local (if present, takes precedence for local development) then .env
+dotenv.config({ path: path.resolve(__dirname, "../../../.env.local"), override: true });
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local"), override: true });
 dotenv.config();
 
 // Strip any surrounding quotes passed from Docker --env-file
