@@ -98,12 +98,16 @@ async function bootstrapWorker(): Promise<void> {
   }, 60000);
 
   // 5. Cloud Run / Container HTTP Health Check Server
-  // Cloud Run services require an HTTP server listening on process.env.PORT to pass startup and liveness probes.
-  const healthPort = process.env.PORT
-    ? parseInt(process.env.PORT, 10)
-    : process.env.NODE_ENV === "production"
-      ? 8080
-      : null;
+  // Cloud Run requires an HTTP server listening on PORT to pass startup and liveness probes.
+  // In local development, PORT=4000 is used by the API server, so worker defaults to WORKER_PORT or skips HTTP binding.
+  const healthPort = process.env.WORKER_PORT
+    ? parseInt(process.env.WORKER_PORT, 10)
+    : process.env.K_SERVICE
+      ? parseInt(process.env.PORT || "8080", 10)
+      : process.env.PORT && process.env.PORT !== "4000"
+        ? parseInt(process.env.PORT, 10)
+        : null;
+
   let healthServer: http.Server | null = null;
   if (healthPort) {
     healthServer = http.createServer((_req, res) => {
@@ -117,12 +121,28 @@ async function bootstrapWorker(): Promise<void> {
       );
     });
 
-    healthServer.listen(healthPort, () => {
-      logger.info(
-        "HEALTH_SERVER",
-        `Health check server listening on port ${healthPort}`,
-      );
+    healthServer.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        logger.warn(
+          "HEALTH_SERVER",
+          `Health check port ${healthPort} is already in use. Worker background queue processing continues normally without HTTP health probe.`,
+        );
+      } else {
+        logger.error("HEALTH_SERVER", `Health check server error: ${err.message}`);
+      }
     });
+
+    try {
+      healthServer.listen(healthPort, () => {
+        logger.info(
+          "HEALTH_SERVER",
+          `Health check server listening on port ${healthPort}`,
+        );
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn("HEALTH_SERVER", `Could not bind health server: ${msg}`);
+    }
   }
 
   // 6. Graceful shutdown handling
