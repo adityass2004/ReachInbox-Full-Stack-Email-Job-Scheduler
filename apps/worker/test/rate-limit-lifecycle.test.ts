@@ -152,7 +152,10 @@ describe("Email Rate-Limiting & Rescheduling Lifecycle (150 Emails Scenario)", (
 
   it("ensures atomic idempotency: the same job cannot be delivered twice", async () => {
     let callCount = 0;
-    const jobState = { status: EmailStatus.SCHEDULED, sentAt: null as Date | null };
+    const jobState: { status: EmailStatus; sentAt: Date | null } = {
+      status: EmailStatus.SCHEDULED,
+      sentAt: null,
+    };
 
     async function attemptSend() {
       // Atomic transition
