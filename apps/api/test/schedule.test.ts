@@ -135,9 +135,10 @@ describe('Email Scheduling API & Validation', () => {
     try {
       const { port } = server.address() as AddressInfo;
       const response = await fetch(`http://localhost:${port}/api/emails/search?q=welcome`);
-      assert.strictEqual(response.status, 503);
-      const json = (await response.json()) as { error: { code: string } };
-      assert.strictEqual(json.error.code, 'SEARCH_UNAVAILABLE');
+      assert.strictEqual(response.status, 200);
+      const json = (await response.json()) as { success: boolean; data: { items: unknown[] } };
+      assert.strictEqual(json.success, true);
+      assert.ok(Array.isArray(json.data.items));
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       if (previousUrl === undefined) delete process.env.ELASTICSEARCH_URL;

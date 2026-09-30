@@ -17,7 +17,8 @@ export function authorizeQueueAdmin(
   }
 
   const allowedEmails = config.bullBoardAdminEmails;
-  if (allowedEmails.length > 0 && !allowedEmails.includes('*') && !allowedEmails.includes(email)) {
+  const isAllowed = allowedEmails.includes('*') || (allowedEmails.length > 0 && allowedEmails.includes(email));
+  if (!isAllowed) {
     res.status(403).json({
       success: false,
       error: { code: 'ADMIN_ACCESS_REQUIRED', message: 'Queue admin access is required' },

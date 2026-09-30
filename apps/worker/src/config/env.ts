@@ -18,6 +18,14 @@ for (const [key, val] of Object.entries(process.env)) {
   }
 }
 
+// Support standard environment variable aliases
+if (!process.env.MAX_EMAILS_PER_HOUR_PER_SENDER && process.env.MAX_EMAILS_PER_HOUR) {
+  process.env.MAX_EMAILS_PER_HOUR_PER_SENDER = process.env.MAX_EMAILS_PER_HOUR;
+}
+if (!process.env.MIN_EMAIL_DELAY_MS && process.env.EMAIL_SEND_DELAY_MS) {
+  process.env.MIN_EMAIL_DELAY_MS = process.env.EMAIL_SEND_DELAY_MS;
+}
+
 const workerEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   REDIS_URL: z.string().default("redis://localhost:6379"),

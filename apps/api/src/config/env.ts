@@ -9,6 +9,11 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
+// Support standard environment variable aliases
+if (!process.env.MAX_EMAILS_PER_HOUR_PER_SENDER && process.env.MAX_EMAILS_PER_HOUR) {
+  process.env.MAX_EMAILS_PER_HOUR_PER_SENDER = process.env.MAX_EMAILS_PER_HOUR;
+}
+
 import { z } from 'zod';
 
 const envSchema = z.object({
