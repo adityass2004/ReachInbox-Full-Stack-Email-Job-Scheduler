@@ -186,6 +186,7 @@ export class EmailSchedulerService {
         scheduledAt: item.scheduledAt,
         status: EmailStatus.SCHEDULED,
         idempotencyKey: item.idempotencyKey,
+        bullJobId: item.id,
       }));
 
       for (let i = 0; i < jobRows.length; i += DB_CHUNK_SIZE) {
@@ -234,18 +235,21 @@ export class EmailSchedulerService {
         bullJobId: idToBullId.get(job.id) || job.id,
       }));
 
-      // Reconcile bullJobId in PostgreSQL in chunks
-      const UPDATE_CHUNK_SIZE = 500;
-      for (let i = 0; i < jobsWithBullId.length; i += UPDATE_CHUNK_SIZE) {
-        const chunk = jobsWithBullId.slice(i, i + UPDATE_CHUNK_SIZE);
-        await prisma.$transaction(
-          chunk.map((job) =>
-            prisma.emailJob.update({
-              where: { id: job.id },
-              data: { bullJobId: String(job.bullJobId) },
-            }),
-          ),
-        );
+      // Reconcile bullJobId in PostgreSQL only if any IDs differed from the pre-allocated UUID
+      const mismatchedJobs = jobsWithBullId.filter((j) => j.bullJobId !== j.id);
+      if (mismatchedJobs.length > 0) {
+        const UPDATE_CHUNK_SIZE = 500;
+        for (let i = 0; i < mismatchedJobs.length; i += UPDATE_CHUNK_SIZE) {
+          const chunk = mismatchedJobs.slice(i, i + UPDATE_CHUNK_SIZE);
+          await prisma.$transaction(
+            chunk.map((job) =>
+              prisma.emailJob.update({
+                where: { id: job.id },
+                data: { bullJobId: String(job.bullJobId) },
+              }),
+            ),
+          );
+        }
       }
 
       const allJobs = [...existingJobs, ...jobsWithBullId];
