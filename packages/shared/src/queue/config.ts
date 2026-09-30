@@ -1,7 +1,9 @@
-import { ConnectionOptions, JobsOptions } from "bullmq";
+import { JobsOptions } from "bullmq";
+import type { RedisOptions } from "ioredis";
 import { QUEUE_NAMES, JOB_NAMES } from "../constants/index.js";
 
 export { QUEUE_NAMES, JOB_NAMES };
+export type { RedisOptions };
 
 /**
  * Standard retry, backoff, and retention policy for BullMQ email jobs.
@@ -30,12 +32,12 @@ export const DEFAULT_JOB_OPTIONS: JobsOptions = {
  * Ready for both local Docker and managed Redis (Upstash, Memorystore, ElastiCache)
  * with TLS, authentication, and custom host/port/password via environment variables.
  */
-export function getRedisConnectionOptions(): ConnectionOptions {
+export function getRedisConnectionOptions(): RedisOptions {
   let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
   redisUrl = redisUrl.replace(/^["']|["']$/g, "");
   const isTlsExplicit = process.env.REDIS_TLS === "true";
 
-  let options: ConnectionOptions;
+  let options: RedisOptions;
 
   try {
     const parsed = new URL(redisUrl);
