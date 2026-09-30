@@ -29,7 +29,7 @@ export type ScheduleEmailInput = z.infer<typeof scheduleEmailSchema>;
 
 export const getScheduledEmailsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
   senderId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(),
   search: z.string().optional(),
@@ -45,7 +45,7 @@ export const searchEmailsQuerySchema = z.object({
     z.array(z.nativeEnum(EmailStatus)).max(5).optional(),
   ),
   page: z.coerce.number().int().min(1).max(10000).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(20),
 });
 
 export type SearchEmailsQuery = z.infer<typeof searchEmailsQuerySchema>;

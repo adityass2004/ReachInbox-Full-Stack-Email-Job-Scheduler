@@ -18,14 +18,28 @@ export default function LoginPage() {
           Access your cold email scheduling and delivery workspace.
         </p>
 
-        {/* Google OAuth Login Button */}
-        <div className="mt-7">
+        {/* Login Action Buttons */}
+        <div className="mt-7 flex flex-col gap-2.5">
           <a
             href={`${API_BASE_URL}/api/auth/google`}
             className="flex h-11 w-full items-center justify-center gap-2.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:bg-primary-hover active:scale-[0.99] transition-all shadow-xs"
           >
             <span>Continue with Google</span>
             <ArrowRight size={14} />
+          </a>
+
+          <div className="relative my-1 flex items-center justify-center">
+            <span className="w-full border-t border-surface-border" />
+            <span className="absolute bg-white px-2 text-[10px] uppercase font-semibold text-ink-muted">
+              or
+            </span>
+          </div>
+
+          <a
+            href={`${API_BASE_URL}/api/auth/dev-login`}
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-surface-border bg-surface-input/60 px-4 text-xs font-semibold text-ink-primary hover:bg-surface-input active:scale-[0.99] transition-all"
+          >
+            <span>Local Demo Sign-In (Instant Access)</span>
           </a>
         </div>
 

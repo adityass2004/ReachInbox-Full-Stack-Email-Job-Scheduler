@@ -58,11 +58,19 @@ export function RecipientChips({
     processText(inputValue);
   }
 
+  const MAX_EXPANDED_RENDER = 40;
   const shouldCollapse = recipients.length > MAX_COLLAPSED_CHIPS && !isExpanded;
   const visibleRecipients = shouldCollapse
     ? recipients.slice(0, MAX_COLLAPSED_CHIPS)
-    : recipients;
-  const hiddenCount = recipients.length - MAX_COLLAPSED_CHIPS;
+    : recipients.slice(0, MAX_EXPANDED_RENDER);
+  const hiddenCount = shouldCollapse
+    ? recipients.length - MAX_COLLAPSED_CHIPS
+    : Math.max(0, recipients.length - MAX_EXPANDED_RENDER);
+
+  function handleAddBulkDemoRecipients() {
+    const bulkDemo = Array.from({ length: 150 }, (_, i) => `bulk.user${i + 1}@reachinbox.test`);
+    onAddRecipients(bulkDemo);
+  }
 
   return (
     <div className="py-3 border-b border-surface-border">
@@ -102,6 +110,13 @@ export function RecipientChips({
             </button>
           )}
 
+          {/* Large list badge when expanded */}
+          {!shouldCollapse && hiddenCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-md border border-primary/20 bg-primary-soft/50 px-2 py-0.5 text-xs font-medium text-ink-secondary">
+              +{hiddenCount} more queued
+            </span>
+          )}
+
           {/* Collapse button when expanded */}
           {recipients.length > MAX_COLLAPSED_CHIPS && isExpanded && (
             <button
@@ -124,15 +139,24 @@ export function RecipientChips({
             onBlur={handleBlur}
             placeholder={
               recipients.length === 0
-                ? "Paste space/comma-separated emails or type (e.g. user@gmail.com)"
+                ? "Paste space/comma-separated emails or type (supports 1,000+ emails)"
                 : "Add more recipients..."
             }
             className="flex-1 min-w-[180px] text-xs text-ink-primary placeholder:text-ink-muted bg-transparent outline-none py-1"
           />
         </div>
 
-        {/* Right Actions: Counter, Clear All, and Upload List Button */}
+        {/* Right Actions: Demo Bulk, Clear All, and Upload List Button */}
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
+          <button
+            type="button"
+            onClick={handleAddBulkDemoRecipients}
+            className="hidden sm:inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 transition-colors shadow-2xs"
+            title="Add 150 test recipients to verify bulk capability"
+          >
+            <span>+150 Bulk Demo</span>
+          </button>
+
           {recipients.length > 0 && onClearRecipients && (
             <button
               type="button"
@@ -161,9 +185,16 @@ export function RecipientChips({
       {/* Recipient Count Indicator */}
       {recipients.length > 0 && (
         <div className="mt-1.5 pl-14 text-[11px] text-ink-secondary flex items-center justify-between">
-          <span>
-            <strong className="font-semibold text-primary">{recipients.length}</strong> recipient{recipients.length === 1 ? '' : 's'} detected
-          </span>
+          <div className="flex items-center gap-2">
+            <span>
+              <strong className="font-semibold text-primary">{recipients.length}</strong> recipient{recipients.length === 1 ? '' : 's'} ready
+            </span>
+            {recipients.length >= 100 && (
+              <span className="inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                Bulk batch ({recipients.length} total)
+              </span>
+            )}
+          </div>
           {recipients.length > 10 && (
             <span className="text-ink-muted text-[10px]">
               Will be scheduled with pacing delay &amp; hourly limit

@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Production-grade distributed email job scheduler with BullMQ, Redis, Elasticsearch, and Next.js",
   "scripts": {
+    "dev": "pnpm --parallel --filter @reachinbox/api --filter @reachinbox/worker --filter @reachinbox/web dev",
     "dev:api": "pnpm --filter @reachinbox/api dev",
     "dev:worker": "pnpm --filter @reachinbox/worker dev",
     "dev:web": "pnpm --filter @reachinbox/web dev",

@@ -335,33 +335,39 @@ export function ComposeForm() {
             />
           </div>
 
-          {/* Email Limits: Delay between emails & Hourly limit */}
-          <div className="flex flex-wrap items-center gap-6 py-2.5 bg-surface-input/30 px-1 text-xs text-ink-secondary select-none">
+          {/* Email Limits: Delay between emails & Hourly rate limit */}
+          <div className="flex flex-wrap items-center gap-6 py-2.5 bg-surface-input/30 px-3 rounded-md my-1 text-xs text-ink-secondary select-none">
             <div className="flex items-center gap-2">
-              <span>Delay between 2 emails</span>
+              <span>Delay between emails</span>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   max="3600"
                   value={delaySeconds}
                   onChange={(e) => setDelaySeconds(e.target.value)}
-                  className="h-6 w-12 rounded border border-surface-border bg-white text-center text-xs font-semibold text-ink-primary focus:border-primary focus:outline-none"
+                  className="h-6 w-14 rounded border border-surface-border bg-white text-center text-xs font-semibold text-ink-primary focus:border-primary focus:outline-none"
                 />
                 <span className="text-[11px] text-ink-muted">sec</span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span>Hourly Limit</span>
-              <input
-                type="number"
-                min="1"
-                max="5000"
-                value={hourlyLimit}
-                onChange={(e) => setHourlyLimit(e.target.value)}
-                className="h-6 w-14 rounded border border-surface-border bg-white text-center text-xs font-semibold text-ink-primary focus:border-primary focus:outline-none"
-              />
+              <span>Hourly Rate Limit</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="1"
+                  max="50000"
+                  value={hourlyLimit}
+                  onChange={(e) => setHourlyLimit(e.target.value)}
+                  className="h-6 w-16 rounded border border-surface-border bg-white text-center text-xs font-semibold text-ink-primary focus:border-primary focus:outline-none"
+                />
+                <span className="text-[11px] text-ink-muted">emails/hr</span>
+              </div>
+              <span className="hidden sm:inline text-[10px] text-ink-muted bg-white border border-surface-border rounded px-1.5 py-0.5">
+                Total recipients unlimited
+              </span>
             </div>
           </div>
         </div>

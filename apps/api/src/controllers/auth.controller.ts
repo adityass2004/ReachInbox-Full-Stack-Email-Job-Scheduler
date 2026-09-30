@@ -139,6 +139,29 @@ export const authController = {
         res.status(200).json({ success: true, data: { authenticated: false } });
     },
 
+    async devLogin(_req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const demoEmail = 'demo@reachinbox.test';
+            const user = await prisma.user.upsert({
+                where: { email: demoEmail },
+                update: {},
+                create: {
+                    email: demoEmail,
+                    name: 'ReachInbox Demo User',
+                    avatar: null,
+                },
+            });
+            const sessionToken = await createSessionToken(user);
+            res.cookie(AUTH_COOKIE_NAME, sessionToken, {
+                ...sessionCookieOptions(),
+                maxAge: 7 * 24 * 60 * 60 * 1000,
+            });
+            res.redirect(302, `${config.corsOrigin}/scheduled`);
+        } catch (error) {
+            next(error);
+        }
+    },
+
     me(req: AuthenticatedRequest, res: Response): void {
         if (!req.user) {
             res.status(401).json({

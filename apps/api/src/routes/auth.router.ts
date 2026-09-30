@@ -12,6 +12,10 @@ authRouter.get('/google/callback', (req, res, next) => {
     authController.callback(req, res, next);
 });
 
+authRouter.get('/dev-login', (req, res, next) => {
+    void authController.devLogin(req, res, next);
+});
+
 authRouter.get('/me', authenticate, (req, res) => {
     authController.me(req, res);
 });
