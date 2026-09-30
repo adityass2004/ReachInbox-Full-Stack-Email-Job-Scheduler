@@ -5,6 +5,7 @@
   },
   "references": [
     { "path": "./packages/shared" },
+    { "path": "./packages/shared/test" },
     { "path": "./apps/api" },
     { "path": "./apps/worker" },
     { "path": "./scripts" }
