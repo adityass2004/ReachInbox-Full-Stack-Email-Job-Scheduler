@@ -54,13 +54,29 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ## 3. Local Startup
 
-Start the entire stack using Docker Compose:
+You can run the application either with Docker Compose or natively with Node/pnpm:
 
+### Option A: Docker Compose (All services in containers)
 ```bash
 docker compose up -d
 ```
+All 6 services (`postgres`, `redis`, `elasticsearch`, `api`, `worker`, `web`) start automatically.
 
-Or run via pnpm in separate terminals as shown below.
+### Option B: Local Node / pnpm (Fast local development)
+1. Start infrastructure services (Postgres, Redis, Elasticsearch):
+```bash
+docker compose up -d postgres redis elasticsearch
+pnpm db:generate
+pnpm db:push
+```
+2. Run all 3 application services concurrently:
+```bash
+pnpm dev
+```
+*(Or run in separate terminals: `pnpm dev:api`, `pnpm dev:worker`, `pnpm dev:web`)*
+
+> **Port Conflict Note:** If port 3000 is occupied by an earlier background container, stop it with:
+> `docker stop reachinbox-web-app`
 
 ## 4. Redis/PostgreSQL Startup
 
@@ -75,7 +91,6 @@ pnpm db:push
 ```bash
 pnpm dev:api
 ```
-
 Backend REST API runs on port 4000.
 
 ## 6. Worker Startup
@@ -83,7 +98,6 @@ Backend REST API runs on port 4000.
 ```bash
 pnpm dev:worker
 ```
-
 BullMQ worker engine connects to Redis, recovers pending jobs, and processes delivery.
 
 ## 7. Frontend Startup
@@ -91,18 +105,23 @@ BullMQ worker engine connects to Redis, recovers pending jobs, and processes del
 ```bash
 pnpm dev:web
 ```
-
 Next.js web portal runs on `http://localhost:3000`.
 
-## 8. How to Schedule an Email
+## 8. How to Schedule an Email (Supports 1,000+ Recipients)
 
-1. Open `http://localhost:3000` in browser and log in.
-2. Click Compose.
-3. Paste recipient email addresses (supports space, comma, semicolon, newline, or CSV upload).
-4. Enter Subject and Body.
-5. Choose Send Now or Send Later (select date and future time).
-6. Set Delay between emails (default: 2s) and Hourly sending limit (default: 200).
-7. Click Send / Schedule.
+1. Open `http://localhost:3000` in browser.
+2. Click **Continue with Google** (or **Local Demo Sign-In** for instant access without credentials).
+3. Click **Compose New Email**.
+4. Add recipients:
+   - Paste comma/space/newline separated emails (e.g. 100+ or 1,000+ addresses).
+   - Or click **Upload List** to upload a `.csv` or `.txt` file.
+   - Or click **+150 Bulk Demo** to instantly populate 150 test recipients.
+5. Enter Subject and Body.
+6. Choose Send Now or click the Clock icon to select a future time.
+7. Configure:
+   - **Delay between emails** (e.g. 2 sec).
+   - **Hourly Rate Limit** (e.g. 200 emails/hour). *Note: The hourly limit is the throughput rate; total recipients can be 1,000+!*
+8. Click **Send**.
 
 ## 9. How to Verify Scheduled Emails
 
@@ -118,7 +137,8 @@ Next.js web portal runs on `http://localhost:3000`.
 
 ## 11. Exact Restart-Persistence Demo Commands
 
-Step 1: Schedule an email 3 minutes into the future from the UI.
+### Method A: Docker Compose Demo
+Step 1: Schedule an email 2–3 minutes into the future from the UI.
 Step 2: Confirm the email appears with status `SCHEDULED` in `/scheduled`.
 Step 3: Stop the API and worker processes while keeping Redis and PostgreSQL alive:
 ```bash
@@ -138,6 +158,14 @@ docker compose logs -f worker
 ```
 Step 7: Wait until the scheduled time arrives.
 Step 8: Verify the email transitions to `SENT` in the UI without duplicates.
+
+### Method B: Terminal / Local Process Demo
+1. Schedule a future email via `http://localhost:3000/compose`.
+2. Stop the API terminal (`Ctrl+C`) and worker terminal (`Ctrl+C`).
+   *Do NOT stop Docker Redis or PostgreSQL.*
+3. Re-start the worker in terminal: `pnpm dev:worker` and API: `pnpm dev:api`.
+4. Observe the worker console: it picks up the delayed job from Redis.
+5. When scheduled time passes, the email sends to Ethereal and updates status to `SENT`.
 
 ## 12. Exact Rate-Limit Demo Configuration
 
